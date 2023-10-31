@@ -1,46 +1,58 @@
 from flask import Flask, render_template, request
-import util
+import psycopg2
 
-# create an application instance
 app = Flask(__name__)
 
-# global variables
-# can be placed in a config file
-username='raywu1990'
-password='test'
-host='127.0.0.1'
-port='5432'
-database='dvdrental'
+# PostgreSQL connection settings
+db_settings = {
+    'dbname': 'dvdrental',
+    'user': 'raywu1990',
+    'password': 'test',
+    'host': '127.0.0.1',
+    'port': '5432'
+}
 
-@app.route('/')
-def index():
-    # this is index page
-    cursor, connection = util.connect_to_db(username,password,host,port,database)
-    rule = request.url_rule
+@app.route('/api/update_basket_a')
+def update_basket_a():
+    try:
+        conn = psycopg2.connect(**db_settings)
+        cursor = conn.cursor()
 
-    if 'update_basket_a' in rule.rule:
-        record = util.run_and_fetch_sql(cursor, "INSERT INTO basket_a (a, fruit_a) VALUES (5, 'Cherry');")
-        # if response is ok, print "Success!"
-        # else, print error
-    elif 'unique' in rule.rule:
-        record = util.run_and_fetch_sql(cursor, "SELECT UNIQUE fruit_a FROM basket_a, basket_b;")
-        log = record
-        # show log in an HTML table
-        # print error if necessary
+        # Insert a new row into basket_a
+        cursor.execute("INSERT INTO basket_a (a, fruit_a) VALUES (5, 'Cherry');")
+        conn.commit()
 
+        return "Success!"
+    except psycopg2.Error as e:
+        error_message = str(e)
+        return f"Error: {error_message}"
+    finally:
+        cursor.close()
+        conn.close()
 
+@app.route('/api/unique')
+def unique_fruits():
+    try:
+        conn = psycopg2.connect(**db_settings)
+        cursor = conn.cursor()
 
-    # disconnect from database
-    util.disconnect_from_db(connection,cursor)
-    # using render_template function, Flask will search
-    # the file named index.html under templates folder
-    return render_template('index.html', log_html = log)
+        # Fetch unique fruits from basket_a and basket_b
+        cursor.execute("SELECT DISTINCT fruit_a FROM basket_a UNION SELECT DISTINCT fruit_b FROM basket_b;")
+        result = cursor.fetchall()
 
+        # Create an HTML table to display the unique fruits
+        table_html = "<table>"
+        for row in result:
+            table_html += f"<tr><td>{row[0]}</td></tr>"
+        table_html += "</table>"
+
+        return table_html
+    except psycopg2.Error as e:
+        error_message = str(e)
+        return f"Error: {error_message}"
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == '__main__':
-	# set debug mode
-    app.debug = True
-    # your local machine ip
-    ip = '127.0.0.1'
-    app.run(host=ip)
-
+    app.run(host='127.0.0.1', port=5000)
