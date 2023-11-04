@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 # PostgreSQL connection settings
 db_settings = {
-    'dbname': 'postgres',
+    'dbname': 'dvdrental',
     'user': 'raywu1990',
     'password': 'test',
     'host': '127.0.0.1',
